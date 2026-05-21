@@ -31,7 +31,7 @@ elif menu == "Completar Formulario":
     if 'selected_file' not in st.session_state and files:
         st.session_state.selected_file = files[0]
 
-    # Variables dinámicas por defecto por si falla la lectura o no hay archivo
+    # Variables dinámicas por defecto claras
     localidad_dinamica = "Rio Segundo"
     equipo_dinamico = "Alessandrini / Rosso / Baldoncini"
     camion_dinamico = "AD"
@@ -43,14 +43,14 @@ elif menu == "Completar Formulario":
     if files and st.session_state.get('selected_file'):
         filepath = f"templates/{st.session_state.selected_file}"
         
-        # Intentar extraer Localidad y Fecha desde el nombre del archivo de forma inteligente
+        # Extraer Localidad por defecto desde el nombre del archivo
         nombre_sin_ext = st.session_state.selected_file.replace(".xlsx", "")
         if "Laguna Larga" in nombre_sin_ext:
             localidad_dinamica = "Laguna Larga"
         elif "Rio Segundo" in nombre_sin_ext:
             localidad_dinamica = "Rio Segundo"
             
-        # Intentar extraer la fecha del nombre del archivo (formato DD-MM-AAAA)
+        # Extraer la fecha del nombre del archivo (formato DD-MM-AAAA)
         partes_nombre = nombre_sin_ext.split(" ")
         for parte in partes_nombre:
             if "-" in parte and len(parte) == 10:
@@ -59,10 +59,14 @@ elif menu == "Completar Formulario":
         # Lectura de celdas desde el Excel
         try:
             wb = load_workbook(filepath, data_only=True)
+            
+            # NOTA: Asegurate de cambiar "Hoja3" por el nombre exacto de la pestaña donde están los datos.
+            # Si el equipo y el camión están en otra pestaña (ej: "Hoja1"), podés usar: ws_datos = wb["Hoja1"]
             ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
             
             # Leer el Camión desde la celda K1
-            camion_dinamico = ws["K1"].value or camion_dinamico
+            if ws["K1"].value:
+                camion_dinamico = str(ws["K1"].value).strip()
             
             # Leer el Equipo desde la fila 2 (Columnas A, B, D, E, F, G)
             columnas_equipo = ["A", "B", "D", "E", "F", "G"]
@@ -72,6 +76,7 @@ elif menu == "Completar Formulario":
                 if celda_val:
                     valores_equipo.append(str(celda_val).strip())
             
+            # Solo sobreescribimos el equipo si realmente encontramos datos válidos en esas celdas
             if valores_equipo:
                 equipo_dinamico = " / ".join(valores_equipo)
             
