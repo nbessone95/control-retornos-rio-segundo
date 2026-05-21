@@ -50,15 +50,17 @@ elif menu == "Completar Formulario":
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
             
             # Lectura del Excel
-            desp_2500 = desp_2000 = desp_1250 = 0
+            desp_2500 = desp_2000 = desp_1250 = total_despachado = 0
             try:
                 wb = load_workbook(filepath, data_only=True)
-                ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
-                desp_2500 = ws3.cell(row=5, column=2).value or 0   # Columna B
-                desp_2000 = ws3.cell(row=8, column=2).value or 0
-                desp_1250 = ws3.cell(row=11, column=2).value or 0
+                ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
+                
+                desp_2500 = ws.cell(row=5, column=2).value or 0   # Columna B
+                desp_2000 = ws.cell(row=8, column=2).value or 0
+                desp_1250 = ws.cell(row=11, column=2).value or 0
+                total_despachado = ws.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250)
             except:
-                pass
+                st.warning("No se pudieron leer todos los datos del Excel.")
 
             # ==================== HOJA 1 - SOLO LECTURA ====================
             st.subheader("1. CONTROL DE RETORNOS DE ENVASES (Solo Lectura)")
@@ -74,26 +76,18 @@ elif menu == "Completar Formulario":
                 st.metric("Cantidad 2500", desp_2500)
                 st.metric("Cantidad 2000", desp_2000)
                 st.metric("Cantidad 1250", desp_1250)
+                st.metric("**TOTAL DESPACHADO**", total_despachado)
 
-            st.subheader("Cambios (del Excel - Hoja 2)")
-            ch1, ch2, ch3 = st.columns(3)
-            with ch1:
-                st.metric("Cambio 2500", 0)
-                st.metric("Cambio 2000", 0)
-            with ch2:
-                st.metric("Cambio 1250", 0)
-                st.metric("Cambio 354", 0)
-            with ch3:
-                st.metric("Cambio 220", 0)
-                st.metric("Cambio 473", 0)
-
-            st.subheader("Otros Datos")
-            clientes = st.number_input("Cantidad de Clientes", value=17)
-            pallets = st.number_input("Cantidad de Pallets", value=0)
-            chapas = st.number_input("Cantidad de Chapas", value=0)
+            st.subheader("Otros Datos (no modificables)")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Cantidad de Clientes", 17)
+                st.metric("Pallets", 0)
+            with col_b:
+                st.metric("Chapas", 0)
 
             # ==================== HOJA 2 - EDITABLE ====================
-            st.subheader("2. RETORNOS Y CAMBIOS (Completar)")
+            st.subheader("2. Retornos y Cambios (Completar)")
             
             st.write("**Retornos**")
             r1, r2 = st.columns(2)
@@ -116,9 +110,12 @@ elif menu == "Completar Formulario":
                 cam_473 = st.number_input("Cambio 473", value=0)
 
             st.write("**Retorno Lleno**")
-            lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
-            lleno_2000 = st.number_input("Retorno Lleno 2000", value=0)
-            lleno_1250 = st.number_input("Retorno Lleno 1250", value=0)
+            rl1, rl2 = st.columns(2)
+            with rl1:
+                lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
+                lleno_2000 = st.number_input("Retorno Lleno 2000", value=0)
+            with rl2:
+                lleno_1250 = st.number_input("Retorno Lleno 1250", value=0)
 
             observaciones = st.text_area("Observaciones", height=100)
 
@@ -139,6 +136,7 @@ elif menu == "Completar Formulario":
                         "Fecha": datetime.today().strftime("%d-%m-%Y"),
                         "Localidad": "Rio Segundo",
                         "Archivo": st.session_state.selected_file,
+                        "Total_Despachado": total_despachado,
                         "Retorno_2500": ret_2500,
                         "Retorno_2000": ret_2000,
                         "Retorno_1250": ret_1250,
@@ -151,9 +149,9 @@ elif menu == "Completar Formulario":
                         "Lleno_2500": lleno_2500,
                         "Lleno_2000": lleno_2000,
                         "Lleno_1250": lleno_1250,
-                        "Clientes": clientes,
-                        "Pallets": pallets,
-                        "Chapas": chapas,
+                        "Clientes": 17,
+                        "Pallets": 0,
+                        "Chapas": 0,
                         "Observaciones": observaciones
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
