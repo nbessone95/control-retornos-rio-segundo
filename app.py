@@ -49,52 +49,81 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
             
-            # ==================== LECTURA COLUMNA B (Hoja 1) ====================
-            col_b_2500 = col_b_2000 = col_b_1250 = 0
+            # Lectura de datos del Excel
+            d2500 = d2000 = d1250 = 0
             try:
                 wb = load_workbook(filepath, data_only=True)
                 ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
-                
-                col_b_2500 = ws.cell(row=5, column=2).value or 0   # Columna B
-                col_b_2000 = ws.cell(row=8, column=2).value or 0
-                col_b_1250 = ws.cell(row=11, column=2).value or 0
+                d2500 = ws.cell(row=5, column=1).value or 0
+                d2000 = ws.cell(row=8, column=1).value or 0
+                d1250 = ws.cell(row=11, column=1).value or 0
             except:
-                st.warning("No se pudieron leer los datos de la columna B.")
+                pass
 
-            # ==================== HOJA 1 ====================
+            # ==================== HOJA 1 - SOLO LECTURA ====================
             st.subheader("📦 1. CONTROL DE RETORNOS DE ENVASES")
-            col1, col2 = st.columns([1, 2])
+            
+            col1, col2 = st.columns(2)
             with col1:
-                st.write("**DATOS COLUMNA B (Excel)**")
-                st.metric("2500", col_b_2500)
-                st.metric("2000", col_b_2000)
-                st.metric("1250", col_b_1250)
+                st.write("**Datos Generales (no modificables)**")
+                st.metric("Localidad", "Rio Segundo")
+                st.metric("Equipo", "Alessandrini / Rosso / Baldoncini")
+                st.metric("Camión", "AD")
+                st.date_input("Fecha", datetime.today(), disabled=True)
             
             with col2:
-                st.write("**RETORNOS (completar)**")
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    ret_2500 = st.number_input("Retorno 2500", value=0)
-                    ret_2000 = st.number_input("Retorno 2000", value=0)
-                with c2:
-                    ret_1250 = st.number_input("Retorno 1250", value=0)
-                    pallets = st.number_input("Pallets", value=0)
-                with c3:
-                    chapas = st.number_input("Chapas", value=0)
-                    clientes = st.number_input("Cantidad de Clientes", value=17)
+                st.write("**Despachos (Columna A)**")
+                st.metric("Despacho 2500", d2500)
+                st.metric("Despacho 2000", d2000)
+                st.metric("Despacho 1250", d1250)
+
+            st.subheader("Cambios / Despachos Detallados")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Cambio 2500", 0, delta="no modificable")
+                st.metric("Cambio 2000", 0, delta="no modificable")
+                st.metric("Cambio 1250", 0, delta="no modificable")
+            with c2:
+                st.metric("Cambio 354", 0, delta="no modificable")
+                st.metric("Cambio 220", 0, delta="no modificable")
+            with c3:
+                st.metric("Cambio Monster 473", 0, delta="no modificable")
+
+            st.subheader("Retornos (Completar)")
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                ret_2500 = st.number_input("Retorno 2500", value=0)
+                ret_2000 = st.number_input("Retorno 2000", value=0)
+            with r2:
+                ret_1250 = st.number_input("Retorno 1250", value=0)
+                clientes = st.number_input("Cantidad de Clientes", value=17)
+            with r3:
+                pallets = st.number_input("Pallets", value=0)
+                chapas = st.number_input("Chapas", value=0)
 
             total_vacios = st.number_input("**TOTAL VACÍOS RETORNADOS**", value=0)
 
-            # ==================== HOJA 2 - SOLO RETORNOS LLENOS ====================
-            st.subheader("📋 2. Retornos Llenos")
-            st.write("**Completar manualmente:**")
+            # ==================== HOJA 2 ====================
+            st.subheader("📋 2. Retornos Llenos y Cambios")
+            st.write("**Retornos Llenos**")
             rl1, rl2 = st.columns(2)
             with rl1:
                 lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
                 lleno_2000 = st.number_input("Retorno Lleno 2000", value=0)
             with rl2:
                 lleno_1250 = st.number_input("Retorno Lleno 1250", value=0)
-                venta_envases = st.number_input("Venta de Envases", value=0)
+
+            st.write("**Cambios**")
+            ch1, ch2, ch3 = st.columns(3)
+            with ch1:
+                cam_2500 = st.number_input("Cambio 2500", value=0)
+                cam_2000 = st.number_input("Cambio 2000", value=0)
+            with ch2:
+                cam_1250 = st.number_input("Cambio 1250", value=0)
+                cam_354 = st.number_input("Cambio 354", value=0)
+            with ch3:
+                cam_220 = st.number_input("Cambio 220", value=0)
+                cam_473 = st.number_input("Cambio 473 (Monster)", value=0)
 
             merc_rota = st.number_input("Mercadería Rota", value=0)
             observaciones = st.text_area("Observaciones", height=100)
@@ -112,41 +141,12 @@ elif menu == "Completar Formulario":
                     firma_path = f"completed/firma_{timestamp}.png"
                     img.save(firma_path)
                     
-                    data = {
-                        "Fecha": datetime.today().strftime("%Y-%m-%d"),
-                        "Archivo": st.session_state.selected_file,
-                        "ColB_2500": col_b_2500,
-                        "ColB_2000": col_b_2000,
-                        "ColB_1250": col_b_1250,
-                        "Retorno_2500": ret_2500,
-                        "Retorno_2000": ret_2000,
-                        "Retorno_1250": ret_1250,
-                        "Pallets": pallets,
-                        "Chapas": chapas,
-                        "Clientes": clientes,
-                        "Total_Vacios": total_vacios,
-                        "Lleno_2500": lleno_2500,
-                        "Lleno_2000": lleno_2000,
-                        "Lleno_1250": lleno_1250,
-                        "Venta_Envases": venta_envases,
-                        "Merc_Rota": merc_rota,
-                        "Observaciones": observaciones
-                    }
+                    data = {**{k:v for k,v in locals().items() if k.startswith(('ret_','lleno_','cam_','pallets','chapas','clientes','total','merc'))}, 
+                           "Fecha": datetime.today().strftime("%Y-%m-%d"),
+                           "Archivo": st.session_state.selected_file}
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
 
                     st.success("✅ ¡Control guardado correctamente!")
                     st.image(firma_path, caption="Firma guardada")
                     st.balloons()
-                else:
-                    st.error("Por favor realizá tu firma digital")
-
-else:
-    st.header("📋 Historial")
-    data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
-    if data_files:
-        for file in sorted(data_files, reverse=True):
-            df = pd.read_csv(f"data/{file}")
-            st.subheader(f"📅 {df['Fecha'].iloc[0]}")
-            st.dataframe(df, use_container_width=True)
-    else:
-        st.info("Aún no hay controles guardados.")
+                else
