@@ -49,30 +49,26 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
             
-            # ==================== LECTURA DEL EXCEL (con error seguro) ====================
-            despacho_2500 = despacho_2000 = despacho_1250 = 0
+            # ==================== LECTURA COLUMNA B (Hoja 1) ====================
+            col_b_2500 = col_b_2000 = col_b_1250 = 0
             try:
                 wb = load_workbook(filepath, data_only=True)
-                ws = wb.active  # Usamos la hoja activa por seguridad
+                ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
                 
-                # Intentamos leer las celdas comunes
-                despacho_2500 = ws.cell(row=5, column=1).value or 0
-                despacho_2000 = ws.cell(row=8, column=1).value or 0
-                despacho_1250 = ws.cell(row=11, column=1).value or 0
-                
-                st.success("✅ Datos del Excel leídos correctamente")
-            except Exception as e:
-                st.error(f"Error al leer Excel: {str(e)}")
-                st.info("Se usarán valores en 0. Puedes completarlos manualmente.")
+                col_b_2500 = ws.cell(row=5, column=2).value or 0   # Columna B
+                col_b_2000 = ws.cell(row=8, column=2).value or 0
+                col_b_1250 = ws.cell(row=11, column=2).value or 0
+            except:
+                st.warning("No se pudieron leer los datos de la columna B.")
 
-            # ==================== HOJA 1 - SOLO LECTURA ====================
+            # ==================== HOJA 1 ====================
             st.subheader("📦 1. CONTROL DE RETORNOS DE ENVASES")
             col1, col2 = st.columns([1, 2])
             with col1:
-                st.write("**DESPACHO (no modificable)**")
-                st.metric("2500", despacho_2500)
-                st.metric("2000", despacho_2000)
-                st.metric("1250", despacho_1250)
+                st.write("**DATOS COLUMNA B (Excel)**")
+                st.metric("2500", col_b_2500)
+                st.metric("2000", col_b_2000)
+                st.metric("1250", col_b_1250)
             
             with col2:
                 st.write("**RETORNOS (completar)**")
@@ -89,8 +85,9 @@ elif menu == "Completar Formulario":
 
             total_vacios = st.number_input("**TOTAL VACÍOS RETORNADOS**", value=0)
 
-            # Hoja 2
-            st.subheader("📋 2. Retorno Llenos")
+            # ==================== HOJA 2 - SOLO RETORNOS LLENOS ====================
+            st.subheader("📋 2. Retornos Llenos")
+            st.write("**Completar manualmente:**")
             rl1, rl2 = st.columns(2)
             with rl1:
                 lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
@@ -99,4 +96,57 @@ elif menu == "Completar Formulario":
                 lleno_1250 = st.number_input("Retorno Lleno 1250", value=0)
                 venta_envases = st.number_input("Venta de Envases", value=0)
 
-            merc
+            merc_rota = st.number_input("Mercadería Rota", value=0)
+            observaciones = st.text_area("Observaciones", height=100)
+
+            # Firma
+            st.subheader("✍️ Firma Digital")
+            from streamlit_drawable_canvas import st_canvas
+            canvas = st_canvas(height=280, width=700, stroke_width=4, stroke_color="#000000", 
+                             background_color="#ffffff", key="canvas")
+
+            if st.button("💾 Guardar Control Completo", type="primary"):
+                if canvas.image_data is not None:
+                    img = Image.fromarray(canvas.image_data.astype("uint8"))
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    firma_path = f"completed/firma_{timestamp}.png"
+                    img.save(firma_path)
+                    
+                    data = {
+                        "Fecha": datetime.today().strftime("%Y-%m-%d"),
+                        "Archivo": st.session_state.selected_file,
+                        "ColB_2500": col_b_2500,
+                        "ColB_2000": col_b_2000,
+                        "ColB_1250": col_b_1250,
+                        "Retorno_2500": ret_2500,
+                        "Retorno_2000": ret_2000,
+                        "Retorno_1250": ret_1250,
+                        "Pallets": pallets,
+                        "Chapas": chapas,
+                        "Clientes": clientes,
+                        "Total_Vacios": total_vacios,
+                        "Lleno_2500": lleno_2500,
+                        "Lleno_2000": lleno_2000,
+                        "Lleno_1250": lleno_1250,
+                        "Venta_Envases": venta_envases,
+                        "Merc_Rota": merc_rota,
+                        "Observaciones": observaciones
+                    }
+                    pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
+
+                    st.success("✅ ¡Control guardado correctamente!")
+                    st.image(firma_path, caption="Firma guardada")
+                    st.balloons()
+                else:
+                    st.error("Por favor realizá tu firma digital")
+
+else:
+    st.header("📋 Historial")
+    data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
+    if data_files:
+        for file in sorted(data_files, reverse=True):
+            df = pd.read_csv(f"data/{file}")
+            st.subheader(f"📅 {df['Fecha'].iloc[0]}")
+            st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Aún no hay controles guardados.")
