@@ -6,8 +6,6 @@ from PIL import Image
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
-st.title("🧾 Control de Retornos - Rio Segundo")
-st.caption("Equipo: Alessandrini / Rosso / Baldoncini")
 
 os.makedirs("templates", exist_ok=True)
 os.makedirs("completed", exist_ok=True)
@@ -23,20 +21,69 @@ if menu == "Subir Plantillas":
             with open(f"templates/{file.name}", "wb") as f:
                 f.write(file.getbuffer())
             st.success(f"✅ {file.name} guardado correctamente")
-        st.rerun()   # ← Esto fuerza la actualización
+        st.rerun()
 
 elif menu == "Completar Formulario":
-    st.header("✍️ Completar Control")
-    
-    # Forzar actualización de la lista de archivos
+    # 1. LOGICA DE BUSQUEDA Y SELECCIÓN DE ARCHIVOS
     files = [f for f in os.listdir("templates") if f.endswith(".xlsx")]
+    
+    if 'selected_file' not in st.session_state and files:
+        st.session_state.selected_file = files[0]
+
+    # Variables dinámicas por defecto por si falla la lectura
+    localidad_dinamica = "Rio Segundo"
+    equipo_dinamico = "Alessandrini / Rosso / Baldoncini"
+    camion_dinamico = "AD"
+    fecha_dinamica = datetime.today().strftime("%d-%m-%Y")
+    
+    desp_2500 = desp_2000 = desp_1250 = total_desp = 0
+
+    # 2. LECTURA ANTICIPADA DEL EXCEL (Para impactar en el título)
+    if files and st.session_state.get('selected_file'):
+        filepath = f"templates/{st.session_state.selected_file}"
+        
+        # Intentar extraer Localidad y Fecha de forma inteligente desde el nombre del archivo
+        # Ejemplo: "Control De Retorno Laguna Larga 21-05-2026.xlsx"
+        nombre_sin_ext = st.session_state.selected_file.replace(".xlsx", "")
+        if "Laguna Larga" in nombre_sin_ext:
+            localidad_dinamica = "Laguna Larga"
+            equipo_dinamico = "Equipo Laguna Larga" # Podés cambiarlo o leerlo de una celda
+            camion_dinamico = "LL"
+        elif "Rio Segundo" in nombre_sin_ext:
+            localidad_dinamica = "Rio Segundo"
+            equipo_dinamico = "Alessandrini / Rosso / Baldoncini"
+            camion_dinamico = "AD"
+            
+        # Intentar extraer la fecha del nombre del archivo si existe (formato DD-MM-AAAA)
+        partes_nombre = nombre_sin_ext.split(" ")
+        for parte in partes_nombre:
+            if "-" in parte and len(parte) == 10:
+                fecha_dinamica = parte
+
+        # Lectura de datos numéricos desde las celdas
+        try:
+            wb = load_workbook(filepath, data_only=True)
+            ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
+            
+            # NOTA: Si la localidad o el equipo están en celdas específicas del Excel, 
+            # podés descommentar las líneas de abajo y asignarles la celda correcta:
+            # localidad_dinamica = ws.cell(row=1, column=1).value or localidad_dinamica
+            
+            desp_2500 = ws.cell(row=5, column=2).value or 0
+            desp_2000 = ws.cell(row=8, column=2).value or 0
+            desp_1250 = ws.cell(row=11, column=2).value or 0
+            total_desp = ws.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250)
+        except:
+            pass
+
+    # 3. RENDERIZADO DEL TÍTULO DINÁMICO
+    st.title(f"🧾 Control de Retornos - {localidad_dinamica}")
+    st.caption(f"Equipo: {equipo_dinamico}")
+    st.header("✍️ Completar Control")
     
     if not files:
         st.warning("No hay plantillas. Ve a 'Subir Plantillas' primero.")
     else:
-        if 'selected_file' not in st.session_state:
-            st.session_state.selected_file = files[0] if files else None
-            
         col_select, col_btn = st.columns([3,1])
         with col_select:
             selected = st.selectbox("Seleccionar archivo a completar", files, 
@@ -49,29 +96,16 @@ elif menu == "Completar Formulario":
                 st.rerun()
         
         if st.session_state.selected_file:
-            filepath = f"templates/{st.session_state.selected_file}"
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
             
-            # Lectura del Excel (Columna B)
-            desp_2500 = desp_2000 = desp_1250 = total_desp = 0
-            try:
-                wb = load_workbook(filepath, data_only=True)
-                ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
-                desp_2500 = ws.cell(row=5, column=2).value or 0
-                desp_2000 = ws.cell(row=8, column=2).value or 0
-                desp_1250 = ws.cell(row=11, column=2).value or 0
-                total_desp = ws.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250)
-            except:
-                pass
-
-            # HOJA 1 - Solo Lectura
+            # HOJA 1 - Solo Lectura (YA ACTUALIZADA)
             st.subheader("1. CONTROL DE RETORNOS DE ENVASES (Solo Lectura)")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Localidad", "Rio Segundo")
-                st.metric("Equipo", "Alessandrini / Rosso / Baldoncini")
-                st.metric("Camión", "AD")
-                st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
+                st.metric("Localidad", localidad_dinamica)
+                st.metric("Equipo", equipo_dinamico)
+                st.metric("Camión", camion_dinamico)
+                st.metric("Fecha", fecha_dinamica)
             with col2:
                 st.metric("Cantidad 2500", desp_2500)
                 st.metric("Cantidad 2000", desp_2000)
@@ -132,7 +166,8 @@ elif menu == "Completar Formulario":
                         'cam_354','cam_220','cam_473','lleno_2500','lleno_2000','lleno_1250',
                         'observaciones']}
                     data.update({
-                        "Fecha": datetime.today().strftime("%d-%m-%Y"),
+                        "Fecha": fecha_dinamica,
+                        "Localidad": localidad_dinamica,
                         "Archivo": st.session_state.selected_file,
                         "Total_Despachado": total_desp
                     })
@@ -150,7 +185,7 @@ else:
     if data_files:
         for f in sorted(data_files, reverse=True):
             df = pd.read_csv(f"data/{f}")
-            st.subheader(f"📅 {df['Fecha'].iloc[0]}")
+            st.subheader(f"📅 {df['Fecha'].iloc[0]} - {df['Localidad'].iloc[0] if 'Localidad' in df.columns else ''}")
             st.dataframe(df, use_container_width=True)
     else:
         st.info("Aún no hay controles guardados.")
