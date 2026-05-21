@@ -44,4 +44,22 @@ elif menu == "Completar Formulario":
                 st.session_state.selected_file = selected
                 st.rerun()
 
-        if st.session
+        if st.session_state.selected_file:
+            filepath = f"templates/{st.session_state.selected_file}"
+            st.success(f"Editando: **{st.session_state.selected_file}**")
+            
+            # Lectura automática del Excel
+            try:
+                wb = load_workbook(filepath, data_only=True)
+                ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
+                
+                # Leer despachos según tu archivo
+                despacho_2500 = ws.cell(row=5, column=1).value or 0
+                despacho_2000 = ws.cell(row=8, column=1).value or 0
+                despacho_1250 = ws.cell(row=11, column=1).value or 0
+                
+                st.subheader("📦 Datos de Despacho (leídos del Excel)")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.metric("Despacho 2500", despacho_2500)
+                    st.metric("Despacho 200
