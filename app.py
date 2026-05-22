@@ -47,6 +47,7 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
+            # Lectura básica
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
             desp_2500 = desp_2000 = desp_1250 = total_desp = 0.0
@@ -68,7 +69,7 @@ elif menu == "Completar Formulario":
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # Hoja 1
+            # ==================== HOJA 1 ====================
             st.subheader("1. CONTROL DE RETORNOS DE ENVASES")
             col1, col2 = st.columns(2)
             with col1:
@@ -87,7 +88,7 @@ elif menu == "Completar Formulario":
             st.metric("Pallets", 0)
             st.metric("Chapas", 0)
 
-            # Hoja 2
+            # ==================== HOJA 2 ====================
             st.subheader("2. Retornos y Cambios")
             r1, r2 = st.columns(2)
             with r1:
@@ -114,7 +115,8 @@ elif menu == "Completar Formulario":
             with rl2:
                 lleno_1250 = st.number_input("Retorno Lleno 1250", value=0.0, step=0.01, format="%.2f")
 
-            # Nuevas columnas
+            # === NUEVAS COLUMNAS ===
+            st.subheader("Otras Operaciones")
             venta_envases = st.number_input("Venta de Envases", value=0.0, step=0.01, format="%.2f")
             prestamos = st.number_input("Préstamos", value=0.0, step=0.01, format="%.2f")
             retiros = st.number_input("Retiros", value=0.0, step=0.01, format="%.2f")
@@ -157,7 +159,6 @@ elif menu == "Completar Formulario":
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
 
                     st.success("✅ ¡Control guardado correctamente!")
-                    st.info(f"Firma: **{firma_nombre}** - {datetime.now().strftime('%d-%m-%Y %H:%M')}")
                     st.balloons()
 
 else:  # Historial
@@ -166,20 +167,11 @@ else:  # Historial
     
     if data_files:
         for f in sorted(data_files, reverse=True):
-            try:
-                df = pd.read_csv(f"data/{f}")
-                fecha = df['Fecha'].iloc[0] if 'Fecha' in df.columns else "Sin fecha"
-                hora = df['Hora'].iloc[0] if 'Hora' in df.columns else ""
-                
-                st.subheader(f"📅 {fecha} {hora} - {df['Archivo'].iloc[0]}")
-                
-                loc = df['Localidad'].iloc[0] if 'Localidad' in df.columns else "Rio Segundo"
-                eq = df['Equipo'].iloc[0] if 'Equipo' in df.columns else "N/A"
-                st.caption(f"Localidad: {loc} | Equipo: {eq}")
-                
-                st.dataframe(df, use_container_width=True)
-                st.divider()
-            except:
-                st.warning(f"Error al leer {f}")
+            df = pd.read_csv(f"data/{f}")
+            fecha = df['Fecha'].iloc[0] if 'Fecha' in df.columns else "Sin fecha"
+            hora = df['Hora'].iloc[0] if 'Hora' in df.columns else ""
+            st.subheader(f"📅 {fecha} {hora} - {df['Archivo'].iloc[0]}")
+            st.dataframe(df, use_container_width=True)
+            st.divider()
     else:
         st.info("Aún no hay controles guardados.")
