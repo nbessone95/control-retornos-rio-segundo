@@ -6,8 +6,8 @@ from PIL import Image
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
+st.title("🧾 Control de Retornos - Rio Segundo")
 
-# Crear directorios si no existen
 os.makedirs("templates", exist_ok=True)
 os.makedirs("completed", exist_ok=True)
 os.makedirs("data", exist_ok=True)
@@ -21,86 +21,24 @@ if menu == "Subir Plantillas":
         for file in uploaded:
             with open(f"templates/{file.name}", "wb") as f:
                 f.write(file.getbuffer())
-            st.success(f"✅ {file.name} guardado correctamente")
+            st.success(f"✅ {file.name} guardado")
         st.rerun()
 
 elif menu == "Completar Formulario":
-    # 1. LOGICA DE BUSQUEDA Y SELECCIÓN DE ARCHIVOS
-    files = [f for f in os.listdir("templates") if f.endswith(".xlsx")]
-    
-    if 'selected_file' not in st.session_state and files:
-        st.session_state.selected_file = files[0]
-
-    # Variables dinámicas por defecto claras
-    localidad_dinamica = "Rio Segundo"
-    equipo_dinamico = "Alessandrini / Rosso / Baldoncini"
-    camion_dinamico = "AD"
-    fecha_dinamica = datetime.today().strftime("%d-%m-%Y")
-    
-    desp_2500 = desp_2000 = desp_1250 = total_desp = 0
-
-    # 2. LECTURA ANTICIPADA DEL EXCEL
-    if files and st.session_state.get('selected_file'):
-        filepath = f"templates/{st.session_state.selected_file}"
-        
-        # Extraer Localidad por defecto desde el nombre del archivo
-        nombre_sin_ext = st.session_state.selected_file.replace(".xlsx", "")
-        if "Laguna Larga" in nombre_sin_ext:
-            localidad_dinamica = "Laguna Larga"
-        elif "Rio Segundo" in nombre_sin_ext:
-            localidad_dinamica = "Rio Segundo"
-            
-        # Extraer la fecha del nombre del archivo (formato DD-MM-AAAA)
-        partes_nombre = nombre_sin_ext.split(" ")
-        for parte in partes_nombre:
-            if "-" in parte and len(parte) == 10:
-                fecha_dinamica = parte
-
-        # Lectura de celdas desde el Excel
-        try:
-            wb = load_workbook(filepath, data_only=True)
-            
-            # NOTA: Asegurate de cambiar "Hoja3" por el nombre exacto de la pestaña donde están los datos.
-            # Si el equipo y el camión están en otra pestaña (ej: "Hoja1"), podés usar: ws_datos = wb["Hoja1"]
-            ws = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
-            
-            # Leer el Camión desde la celda K1
-            if ws["K1"].value:
-                camion_dinamico = str(ws["K1"].value).strip()
-            
-            # Leer el Equipo desde la fila 2 (Columnas A, B, D, E, F, G)
-            columnas_equipo = ["A", "B", "D", "E", "F", "G"]
-            valores_equipo = []
-            for col in columnas_equipo:
-                celda_val = ws[f"{col}2"].value
-                if celda_val:
-                    valores_equipo.append(str(celda_val).strip())
-            
-            # Solo sobreescribimos el equipo si realmente encontramos datos válidos en esas celdas
-            if valores_equipo:
-                equipo_dinamico = " / ".join(valores_equipo)
-            
-            # Leer cantidades de despacho
-            desp_2500 = ws.cell(row=5, column=2).value or 0
-            desp_2000 = ws.cell(row=8, column=2).value or 0
-            desp_1250 = ws.cell(row=11, column=2).value or 0
-            total_desp = ws.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250)
-        except:
-            pass
-
-    # 3. RENDERIZADO DE TÍTULOS CON DATOS EN VIVO
-    st.title(f"🧾 Control de Retornos - {localidad_dinamica}")
-    st.caption(f"Equipo: {equipo_dinamico}")
     st.header("✍️ Completar Control")
     
+    files = [f for f in os.listdir("templates") if f.endswith(".xlsx")]
+    
     if not files:
-        st.warning("No hay plantillas. Ve a 'Subir Plantillas' primero.")
+        st.warning("No hay plantillas. Sube una primero.")
     else:
+        if 'selected_file' not in st.session_state:
+            st.session_state.selected_file = files[0] if files else None
+            
         col_select, col_btn = st.columns([3,1])
         with col_select:
             selected = st.selectbox("Seleccionar archivo a completar", files, 
-                                  index=files.index(st.session_state.selected_file) if st.session_state.selected_file in files else 0,
-                                  key="file_selector")
+                                  index=files.index(st.session_state.selected_file) if st.session_state.selected_file in files else 0)
         
         with col_btn:
             if st.button("Cargar y Leer Datos del Excel", type="primary"):
@@ -108,29 +46,53 @@ elif menu == "Completar Formulario":
                 st.rerun()
         
         if st.session_state.selected_file:
+            filepath = f"templates/{st.session_state.selected_file}"
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
             
-            # HOJA 1 - Solo Lectura
-            st.subheader("1. CONTROL DE RETORNOS DE ENVASES (Solo Lectura)")
+            # Lectura del Excel
+            equipo = "Alessandrini / Rosso / Baldoncini"  # Valor por defecto
+            desp_2500 = desp_2000 = desp_1250 = total_desp = 0
+            try:
+                wb = load_workbook(filepath, data_only=True)
+                
+                # Leer equipo desde Hoja2
+                if "Hoja2" in wb.sheetnames:
+                    ws2 = wb["Hoja2"]
+                    equipo = ws2.cell(row=2, column=2).value or equipo
+                
+                # Leer despachos desde Hoja3 (Columna B)
+                ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
+                desp_2500 = ws3.cell(row=5, column=2).value or 0
+                desp_2000 = ws3.cell(row=8, column=2).value or 0
+                desp_1250 = ws3.cell(row=11, column=2).value or 0
+                total_desp = ws3.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250)
+            except:
+                pass
+
+            # ==================== HOJA 1 ====================
+            st.subheader("1. CONTROL DE RETORNOS DE ENVASES")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Localidad", localidad_dinamica)
-                st.metric("Equipo", equipo_dinamico)
-                st.metric("Camión", camion_dinamico)
-                st.metric("Fecha", fecha_dinamica)
+                st.metric("Localidad", "Rio Segundo")
+                st.metric("Equipo", equipo)
+                st.metric("Camión", "AD")
+                st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
+            
             with col2:
                 st.metric("Cantidad 2500", desp_2500)
                 st.metric("Cantidad 2000", desp_2000)
                 st.metric("Cantidad 1250", desp_1250)
                 st.metric("**TOTAL DESPACHADO**", total_desp)
 
-            st.subheader("Otros Datos (no modificables)")
+            st.subheader("Datos Fijos (no modificables)")
             st.metric("Cantidad de Clientes", 17)
             st.metric("Pallets", 0)
             st.metric("Chapas", 0)
 
-            # HOJA 2 - Editable
+            # ==================== HOJA 2 ====================
             st.subheader("2. Retornos y Cambios (Completar)")
+            
+            st.write("**Retornos**")
             r1, r2 = st.columns(2)
             with r1:
                 ret_2500 = st.number_input("Retorno 2500", value=0)
@@ -173,34 +135,9 @@ elif menu == "Completar Formulario":
                     firma_path = f"completed/firma_{timestamp}.png"
                     img.save(firma_path)
                     
-                    data = {key: value for key, value in locals().items() if key in [
-                        'ret_2500','ret_2000','ret_1250','cam_2500','cam_2000','cam_1250',
-                        'cam_354','cam_220','cam_473','lleno_2500','lleno_2000','lleno_1250',
-                        'observaciones']}
-                    data.update({
-                        "Fecha": fecha_dinamica,
-                        "Localidad": localidad_dinamica,
-                        "Equipo": equipo_dinamico,
-                        "Camion": camion_dinamico,
+                    data = {
+                        "Fecha": datetime.today().strftime("%d-%m-%Y"),
+                        "Equipo": equipo,
                         "Archivo": st.session_state.selected_file,
-                        "Total_Despachado": total_desp
-                    })
-                    pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
-
-                    st.success("✅ ¡Control guardado correctamente!")
-                    st.image(firma_path, caption="Firma guardada")
-                    st.balloons()
-                else:
-                    st.error("Por favor realizá tu firma digital")
-
-else:
-    st.header("📋 Historial")
-    data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
-    if data_files:
-        for f in sorted(data_files, reverse=True):
-            df = pd.read_csv(f"data/{f}")
-            loc = df['Localidad'].iloc[0] if 'Localidad' in df.columns else ''
-            st.subheader(f"📅 {df['Fecha'].iloc[0]} - {loc}")
-            st.dataframe(df, use_container_width=True)
-    else:
-        st.info("Aún no hay controles guardados.")
+                        "Total_Despachado": total_desp,
+                        "Retorno_2500": ret_250
