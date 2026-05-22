@@ -50,7 +50,6 @@ elif menu == "Completar Formulario":
             # Lectura básica
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
-            desp_2500 = desp_2000 = desp_1250 = total_desp = 0.0
             try:
                 wb = load_workbook(filepath, data_only=True)
                 ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
@@ -59,63 +58,43 @@ elif menu == "Completar Formulario":
                 if "Hoja2" in wb.sheetnames:
                     ws2 = wb["Hoja2"]
                     equipo = str(ws2.cell(row=2, column=2).value or equipo)
-                
-                desp_2500 = float(ws3.cell(row=5, column=2).value or 0)
-                desp_2000 = float(ws3.cell(row=8, column=2).value or 0)
-                desp_1250 = float(ws3.cell(row=11, column=2).value or 0)
-                total_desp = float(ws3.cell(row=24, column=5).value or (desp_2500 + desp_2000 + desp_1250))
             except:
                 pass
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # ==================== HOJA 1 ====================
-            st.subheader("1. CONTROL DE RETORNOS DE ENVASES")
+            # === FORMULARIO ===
+            st.subheader("1. Datos Generales (Solo Lectura)")
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Localidad", localidad)
                 st.metric("Equipo", equipo)
                 st.metric("Camión", "AD")
-                st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
             with col2:
-                st.metric("Cantidad 2500", desp_2500)
-                st.metric("Cantidad 2000", desp_2000)
-                st.metric("Cantidad 1250", desp_1250)
-                st.metric("**TOTAL DESPACHADO**", total_desp)
+                st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
 
-            st.subheader("Datos Fijos")
-            st.metric("Clientes", 17)
-            st.metric("Pallets", 0)
-            st.metric("Chapas", 0)
-
-            # ==================== HOJA 2 ====================
-            st.subheader("2. Retornos y Cambios")
-            r1, r2 = st.columns(2)
-            with r1:
+            st.subheader("2. Retornos, Cambios y Operaciones")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
                 ret_2500 = st.number_input("Retorno 2500", value=0.0, step=0.01, format="%.2f")
                 ret_2000 = st.number_input("Retorno 2000", value=0.0, step=0.01, format="%.2f")
-            with r2:
                 ret_1250 = st.number_input("Retorno 1250", value=0.0, step=0.01, format="%.2f")
-
-            c1, c2, c3 = st.columns(3)
-            with c1:
+            with col_b:
                 cam_2500 = st.number_input("Cambio 2500", value=0.0, step=0.01, format="%.2f")
                 cam_2000 = st.number_input("Cambio 2000", value=0.0, step=0.01, format="%.2f")
-            with c2:
                 cam_1250 = st.number_input("Cambio 1250", value=0.0, step=0.01, format="%.2f")
+
+            col_c, col_d = st.columns(2)
+            with col_c:
                 cam_354 = st.number_input("Cambio 354", value=0.0, step=0.01, format="%.2f")
-            with c3:
                 cam_220 = st.number_input("Cambio 220", value=0.0, step=0.01, format="%.2f")
                 cam_473 = st.number_input("Cambio 473", value=0.0, step=0.01, format="%.2f")
-
-            rl1, rl2 = st.columns(2)
-            with rl1:
+            with col_d:
                 lleno_2500 = st.number_input("Retorno Lleno 2500", value=0.0, step=0.01, format="%.2f")
                 lleno_2000 = st.number_input("Retorno Lleno 2000", value=0.0, step=0.01, format="%.2f")
-            with rl2:
                 lleno_1250 = st.number_input("Retorno Lleno 1250", value=0.0, step=0.01, format="%.2f")
 
-            # === NUEVAS COLUMNAS ===
             st.subheader("Otras Operaciones")
             venta_envases = st.number_input("Venta de Envases", value=0.0, step=0.01, format="%.2f")
             prestamos = st.number_input("Préstamos", value=0.0, step=0.01, format="%.2f")
@@ -137,7 +116,6 @@ elif menu == "Completar Formulario":
                         "Localidad": localidad,
                         "Equipo": equipo,
                         "Archivo": st.session_state.selected_file,
-                        "Total_Despachado": total_desp,
                         "Retorno_2500": ret_2500,
                         "Retorno_2000": ret_2000,
                         "Retorno_1250": ret_1250,
@@ -158,7 +136,7 @@ elif menu == "Completar Formulario":
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
 
-                    st.success("✅ ¡Control guardado correctamente!")
+                    st.success("✅ ¡Guardado correctamente!")
                     st.balloons()
 
 else:  # Historial
@@ -168,10 +146,8 @@ else:  # Historial
     if data_files:
         for f in sorted(data_files, reverse=True):
             df = pd.read_csv(f"data/{f}")
-            fecha = df['Fecha'].iloc[0] if 'Fecha' in df.columns else "Sin fecha"
-            hora = df['Hora'].iloc[0] if 'Hora' in df.columns else ""
-            st.subheader(f"📅 {fecha} {hora} - {df['Archivo'].iloc[0]}")
+            st.subheader(f"📅 {df['Fecha'].iloc[0]} {df['Hora'].iloc[0]} - {df['Archivo'].iloc[0]}")
             st.dataframe(df, use_container_width=True)
             st.divider()
     else:
-        st.info("Aún no hay controles guardados.")
+        st.info("Aún no hay controles guardados. Completá uno primero.")
