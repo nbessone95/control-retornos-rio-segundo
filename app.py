@@ -6,8 +6,6 @@ from PIL import Image
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
-st.title("🧾 Control de Retornos - Rio Segundo")
-st.caption("Equipo: Alessandrini / Rosso / Baldoncini")
 
 os.makedirs("templates", exist_ok=True)
 os.makedirs("completed", exist_ok=True)
@@ -48,7 +46,9 @@ elif menu == "Completar Formulario":
         
         if st.session_state.selected_file:
             filepath = f"templates/{st.session_state.selected_file}"
-            st.success(f"Trabajando con: **{st.session_state.selected_file}**")
+            
+            # Título dinámico según el archivo
+            st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
             # Lectura del Excel
             equipo = "Alessandrini / Rosso / Baldoncini"
@@ -56,12 +56,10 @@ elif menu == "Completar Formulario":
             try:
                 wb = load_workbook(filepath, data_only=True)
                 
-                # Leer equipo desde Hoja 2
                 if "Hoja2" in wb.sheetnames:
                     ws2 = wb["Hoja2"]
                     equipo = ws2.cell(row=2, column=2).value or equipo
                 
-                # Leer despachos desde Hoja 3 (Columna B)
                 ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
                 desp_2500 = ws3.cell(row=5, column=2).value or 0
                 desp_2000 = ws3.cell(row=8, column=2).value or 0
@@ -70,15 +68,16 @@ elif menu == "Completar Formulario":
             except:
                 pass
 
+            st.success(f"Trabajando con: **{st.session_state.selected_file}**")
+
             # ==================== HOJA 1 ====================
-            st.subheader("1. CONTROL DE RETORNOS DE ENVASES")
+            st.subheader("1. CONTROL DE RETORNOS DE ENVASES (Solo Lectura)")
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Localidad", "Rio Segundo")
                 st.metric("Equipo", equipo)
                 st.metric("Camión", "AD")
                 st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
-            
             with col2:
                 st.metric("Cantidad 2500", desp_2500)
                 st.metric("Cantidad 2000", desp_2000)
@@ -110,4 +109,68 @@ elif menu == "Completar Formulario":
                 cam_1250 = st.number_input("Cambio 1250", value=0)
                 cam_354 = st.number_input("Cambio 354", value=0)
             with c3:
-                cam_220
+                cam_220 = st.number_input("Cambio 220", value=0)
+                cam_473 = st.number_input("Cambio 473", value=0)
+
+            st.write("**Retorno Lleno**")
+            rl1, rl2 = st.columns(2)
+            with rl1:
+                lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
+                lleno_2000 = st.number_input("Retorno Lleno 2000", value=0)
+            with rl2:
+                lleno_1250 = st.number_input("Retorno Lleno 1250", value=0)
+
+            observaciones = st.text_area("Observaciones", height=100)
+
+            # Firma
+            st.subheader("✍️ Firma Digital")
+            from streamlit_drawable_canvas import st_canvas
+            canvas = st_canvas(height=280, width=700, stroke_width=4, stroke_color="#000000", 
+                             background_color="#ffffff", key="canvas")
+
+            if st.button("💾 Guardar Control Completo", type="primary"):
+                if canvas.image_data is not None:
+                    img = Image.fromarray(canvas.image_data.astype("uint8"))
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    firma_path = f"completed/firma_{timestamp}.png"
+                    img.save(firma_path)
+                    
+                    data = {
+                        "Fecha": datetime.today().strftime("%d-%m-%Y"),
+                        "Equipo": equipo,
+                        "Archivo": st.session_state.selected_file,
+                        "Total_Despachado": total_desp,
+                        "Retorno_2500": ret_2500,
+                        "Retorno_2000": ret_2000,
+                        "Retorno_1250": ret_1250,
+                        "Cambio_2500": cam_2500,
+                        "Cambio_2000": cam_2000,
+                        "Cambio_1250": cam_1250,
+                        "Cambio_354": cam_354,
+                        "Cambio_220": cam_220,
+                        "Cambio_473": cam_473,
+                        "Lleno_2500": lleno_2500,
+                        "Lleno_2000": lleno_2000,
+                        "Lleno_1250": lleno_1250,
+                        "Observaciones": observaciones
+                    }
+                    pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
+
+                    st.success("✅ ¡Guardado correctamente!")
+                    st.image(firma_path, caption="Firma guardada")
+                    st.balloons()
+                else:
+                    st.error("Por favor realizá tu firma digital")
+
+else:  # Historial
+    st.header("📋 Historial de Controles")
+    data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
+    if data_files:
+        for f in sorted(data_files, reverse=True):
+            df = pd.read_csv(f"data/{f}")
+            st.subheader(f"📅 {df['Fecha'].iloc[0]}")
+            st.caption(f"Archivo: {df['Archivo'].iloc[0]}")
+            st.dataframe(df, use_container_width=True)
+            st.divider()
+    else:
+        st.info("Aún no hay controles guardados.")
