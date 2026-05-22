@@ -158,26 +158,33 @@ elif menu == "Completar Formulario":
                 else:
                     st.error("Por favor realizá tu firma digital")
 
-else:  # Historial Mejorado
+else:  # Historial Seguro
     st.header("📋 Historial de Controles")
     data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
+    
     if data_files:
         for f in sorted(data_files, reverse=True):
-            df = pd.read_csv(f"data/{f}")
-            st.subheader(f"📅 {df['Fecha'].iloc[0]} - {df['Archivo'].iloc[0]}")
-            
-            # Evitar KeyError
-            loc = df['Localidad'].iloc[0] if 'Localidad' in df.columns else "Rio Segundo"
-            eq = df['Equipo'].iloc[0] if 'Equipo' in df.columns else "N/A"
-            st.caption(f"Localidad: {loc} | Equipo: {eq}")
-            
-            st.dataframe(df.drop(columns=["Fecha", "Archivo", "Localidad", "Equipo", "Firma"], errors='ignore'), use_container_width=True)
-            
-            if "Firma" in df.columns:
-                firma_path = df["Firma"].iloc[0]
-                if os.path.exists(firma_path):
-                    st.image(firma_path, caption="Firma del control", width=500)
-            
-            st.divider()
+            try:
+                df = pd.read_csv(f"data/{f}")
+                st.subheader(f"📅 {df['Fecha'].iloc[0]} - {df['Archivo'].iloc[0]}")
+                
+                loc = df['Localidad'].iloc[0] if 'Localidad' in df.columns else "Rio Segundo"
+                eq = df['Equipo'].iloc[0] if 'Equipo' in df.columns else "N/A"
+                st.caption(f"Localidad: {loc} | Equipo: {eq}")
+                
+                # Mostrar tabla sin columnas sensibles
+                cols_to_drop = ["Fecha", "Archivo", "Localidad", "Equipo", "Firma"]
+                display_df = df.drop(columns=[col for col in cols_to_drop if col in df.columns], errors='ignore')
+                st.dataframe(display_df, use_container_width=True)
+                
+                # Mostrar firma si existe
+                if "Firma" in df.columns:
+                    firma_path = df["Firma"].iloc[0]
+                    if os.path.exists(firma_path):
+                        st.image(firma_path, caption="Firma del control", width=500)
+                
+                st.divider()
+            except Exception as e:
+                st.warning(f"Error al leer {f}")
     else:
         st.info("Aún no hay controles guardados.")
