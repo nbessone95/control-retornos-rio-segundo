@@ -48,23 +48,18 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
-            # Lectura del Excel con celdas exactas
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
             desp_2500 = desp_2000 = desp_1250 = total_desp = 0
             try:
                 wb = load_workbook(filepath, data_only=True)
-                
-                # Localidad en Hoja 3 (o activa) - Celda B2
                 ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
                 localidad = ws3.cell(row=2, column=2).value or localidad
                 
-                # Equipo en Hoja 2 - Celda B2
                 if "Hoja2" in wb.sheetnames:
                     ws2 = wb["Hoja2"]
                     equipo = ws2.cell(row=2, column=2).value or equipo
                 
-                # Despachos (Columna B)
                 desp_2500 = ws3.cell(row=5, column=2).value or 0
                 desp_2000 = ws3.cell(row=8, column=2).value or 0
                 desp_1250 = ws3.cell(row=11, column=2).value or 0
@@ -74,7 +69,7 @@ elif menu == "Completar Formulario":
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # ==================== HOJA 1 ====================
+            # Hoja 1
             st.subheader("1. CONTROL DE RETORNOS DE ENVASES")
             col1, col2 = st.columns(2)
             with col1:
@@ -88,15 +83,13 @@ elif menu == "Completar Formulario":
                 st.metric("Cantidad 1250", desp_1250)
                 st.metric("**TOTAL DESPACHADO**", total_desp)
 
-            st.subheader("Datos Fijos (no modificables)")
-            st.metric("Cantidad de Clientes", 17)
+            st.subheader("Datos Fijos")
+            st.metric("Clientes", 17)
             st.metric("Pallets", 0)
             st.metric("Chapas", 0)
 
-            # ==================== HOJA 2 ====================
-            st.subheader("2. Retornos y Cambios (Completar)")
-            
-            st.write("**Retornos**")
+            # Hoja 2
+            st.subheader("2. Retornos y Cambios")
             r1, r2 = st.columns(2)
             with r1:
                 ret_2500 = st.number_input("Retorno 2500", value=0)
@@ -104,7 +97,6 @@ elif menu == "Completar Formulario":
             with r2:
                 ret_1250 = st.number_input("Retorno 1250", value=0)
 
-            st.write("**Cambios**")
             c1, c2, c3 = st.columns(3)
             with c1:
                 cam_2500 = st.number_input("Cambio 2500", value=0)
@@ -116,7 +108,6 @@ elif menu == "Completar Formulario":
                 cam_220 = st.number_input("Cambio 220", value=0)
                 cam_473 = st.number_input("Cambio 473", value=0)
 
-            st.write("**Retorno Lleno**")
             rl1, rl2 = st.columns(2)
             with rl1:
                 lleno_2500 = st.number_input("Retorno Lleno 2500", value=0)
@@ -126,7 +117,6 @@ elif menu == "Completar Formulario":
 
             observaciones = st.text_area("Observaciones", height=100)
 
-            # Firma
             st.subheader("✍️ Firma Digital")
             from streamlit_drawable_canvas import st_canvas
             canvas = st_canvas(height=280, width=700, stroke_width=4, stroke_color="#000000", 
@@ -162,20 +152,24 @@ elif menu == "Completar Formulario":
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
 
-                    st.success("✅ ¡Guardado correctamente!")
+                    st.success("✅ Guardado correctamente!")
                     st.image(firma_path, caption="Firma guardada")
                     st.balloons()
                 else:
                     st.error("Por favor realizá tu firma digital")
 
-else:  # Historial
+else:  # Historial Mejorado
     st.header("📋 Historial de Controles")
     data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
     if data_files:
         for f in sorted(data_files, reverse=True):
             df = pd.read_csv(f"data/{f}")
             st.subheader(f"📅 {df['Fecha'].iloc[0]} - {df['Archivo'].iloc[0]}")
-            st.caption(f"Localidad: {df['Localidad'].iloc[0]} | Equipo: {df['Equipo'].iloc[0]}")
+            
+            # Evitar KeyError
+            loc = df['Localidad'].iloc[0] if 'Localidad' in df.columns else "Rio Segundo"
+            eq = df['Equipo'].iloc[0] if 'Equipo' in df.columns else "N/A"
+            st.caption(f"Localidad: {loc} | Equipo: {eq}")
             
             st.dataframe(df.drop(columns=["Fecha", "Archivo", "Localidad", "Equipo", "Firma"], errors='ignore'), use_container_width=True)
             
