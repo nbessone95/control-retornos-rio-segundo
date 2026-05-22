@@ -39,9 +39,22 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
-            st.success(f"Editando: {st.session_state.selected_file}")
+            # Lectura básica
+            localidad = "Rio Segundo"
+            equipo = "Alessandrini / Rosso / Baldoncini"
+            try:
+                wb = load_workbook(filepath, data_only=True)
+                ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
+                localidad = str(ws3.cell(row=2, column=2).value or localidad)
+                if "Hoja2" in wb.sheetnames:
+                    ws2 = wb["Hoja2"]
+                    equipo = str(ws2.cell(row=2, column=2).value or equipo)
+            except:
+                pass
 
-            # Retornos
+            st.success(f"Trabajando con: **{st.session_state.selected_file}**")
+
+            # ==================== CAMPOS ====================
             st.subheader("Retornos")
             col1, col2 = st.columns(2)
             with col1:
@@ -50,7 +63,6 @@ elif menu == "Completar Formulario":
             with col2:
                 ret_1250 = st.number_input("Retorno 1250", value=0.0, step=0.01, format="%.2f")
 
-            # Retornos Llenos
             st.subheader("Retornos Llenos")
             rl1, rl2 = st.columns(2)
             with rl1:
@@ -59,7 +71,6 @@ elif menu == "Completar Formulario":
             with rl2:
                 lleno_1250 = st.number_input("Lleno 1250", value=0.0, step=0.01, format="%.2f")
 
-            # Cambios
             st.subheader("Cambios")
             c1, c2, c3 = st.columns(3)
             with c1:
@@ -72,45 +83,54 @@ elif menu == "Completar Formulario":
                 cam_220 = st.number_input("Cambio 220", value=0.0, step=0.01, format="%.2f")
                 cam_473 = st.number_input("Cambio 473", value=0.0, step=0.01, format="%.2f")
 
-            # NUEVAS COLUMNAS - VISIBLES
-            st.subheader("5. Otras Operaciones")
-            venta_envases = st.number_input("Venta de Envases", value=0.0, step=0.01, format="%.2f")
-            prestamos = st.number_input("Préstamos", value=0.0, step=0.01, format="%.2f")
-            retiros = st.number_input("Retiros", value=0.0, step=0.01, format="%.2f")
+            # ==================== COLUMNAS NUEVAS ====================
+            st.subheader("Otras Operaciones")
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                venta_envases = st.number_input("Venta de Envases", value=0.0, step=0.01, format="%.2f")
+            with col_b:
+                prestamos = st.number_input("Préstamos", value=0.0, step=0.01, format="%.2f")
+            with col_c:
+                retiros = st.number_input("Retiros", value=0.0, step=0.01, format="%.2f")
 
-            observaciones = st.text_area("Observaciones")
-            firma = st.text_input("Firma (Nombre y Apellido)")
+            observaciones = st.text_area("Observaciones", height=80)
 
-            if st.button("💾 Guardar Control", type="primary"):
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-                data = {
-                    "Fecha": datetime.today().strftime("%d-%m-%Y"),
-                    "Hora": datetime.today().strftime("%H:%M"),
-                    "Archivo": st.session_state.selected_file,
-                    "Retorno_2500": ret_2500,
-                    "Retorno_2000": ret_2000,
-                    "Retorno_1250": ret_1250,
-                    "Lleno_2500": lleno_2500,
-                    "Lleno_2000": lleno_2000,
-                    "Lleno_1250": lleno_1250,
-                    "Cambio_2500": cam_2500,
-                    "Cambio_2000": cam_2000,
-                    "Cambio_1250": cam_1250,
-                    "Cambio_354": cam_354,
-                    "Cambio_220": cam_220,
-                    "Cambio_473": cam_473,
-                    "Venta_Envases": venta_envases,
-                    "Prestamos": prestamos,
-                    "Retiros": retiros,
-                    "Observaciones": observaciones,
-                    "Firma": firma
-                }
-                pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
-                st.success("✅ Guardado correctamente!")
-                st.balloons()
+            st.subheader("Firma Digital")
+            firma_nombre = st.text_input("Nombre y Apellido", "")
+
+            if st.button("💾 Guardar Control Completo", type="primary"):
+                if not firma_nombre.strip():
+                    st.error("Por favor escribe tu nombre")
+                else:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    data = {
+                        "Fecha": datetime.today().strftime("%d-%m-%Y"),
+                        "Hora": datetime.today().strftime("%H:%M"),
+                        "Archivo": st.session_state.selected_file,
+                        "Retorno_2500": ret_2500,
+                        "Retorno_2000": ret_2000,
+                        "Retorno_1250": ret_1250,
+                        "Lleno_2500": lleno_2500,
+                        "Lleno_2000": lleno_2000,
+                        "Lleno_1250": lleno_1250,
+                        "Cambio_2500": cam_2500,
+                        "Cambio_2000": cam_2000,
+                        "Cambio_1250": cam_1250,
+                        "Cambio_354": cam_354,
+                        "Cambio_220": cam_220,
+                        "Cambio_473": cam_473,
+                        "Venta_Envases": venta_envases,
+                        "Prestamos": prestamos,
+                        "Retiros": retiros,
+                        "Observaciones": observaciones,
+                        "Firma": firma_nombre
+                    }
+                    pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
+                    st.success("✅ Guardado correctamente!")
+                    st.balloons()
 
 else:
-    st.header("Historial")
+    st.header("📋 Historial")
     data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
     if data_files:
         for f in sorted(data_files, reverse=True):
