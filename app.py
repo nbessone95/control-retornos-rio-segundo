@@ -2,12 +2,14 @@ import streamlit as st
 from datetime import datetime
 import os
 import pandas as pd
+from PIL import Image
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
 st.title("🧾 Control de Retornos - Rio Segundo")
 
 os.makedirs("templates", exist_ok=True)
+os.makedirs("completed", exist_ok=True)
 os.makedirs("data", exist_ok=True)
 
 menu = st.sidebar.selectbox("Menú", ["Completar Formulario", "Subir Plantillas", "Historial"])
@@ -67,7 +69,7 @@ elif menu == "Completar Formulario":
                 st.metric("Clientes", 17)
                 st.metric("Total Despachado", total_desp)
 
-            # Formulario Editable
+            # Formulario
             st.subheader("2. Retornos y Cambios")
             c1, c2 = st.columns(2)
             with c1:
@@ -107,18 +109,46 @@ elif menu == "Completar Formulario":
 
             observaciones = st.text_area("Observaciones", height=80)
 
-            st.subheader("✍️ Firmas")
+            # ==================== FIRMAS DIGITALES ====================
+            st.subheader("✍️ Firmas Digitales")
             col_f1, col_f2 = st.columns(2)
+            
             with col_f1:
-                firma_repartidor = st.text_input("Firma del Repartidor", "")
+                st.write("**Firma del Repartidor**")
+                canvas1 = st_canvas(
+                    height=200,
+                    width=350,
+                    stroke_width=3,
+                    stroke_color="#000000",
+                    background_color="#ffffff",
+                    key="canvas_repartidor"
+                )
+            
             with col_f2:
-                firma_controlador = st.text_input("Firma del Controlador", "")
+                st.write("**Firma del Controlador**")
+                canvas2 = st_canvas(
+                    height=200,
+                    width=350,
+                    stroke_width=3,
+                    stroke_color="#000000",
+                    background_color="#ffffff",
+                    key="canvas_controlador"
+                )
 
             if st.button("💾 Guardar Control Completo", type="primary"):
-                if not firma_repartidor.strip():
-                    st.error("Por favor completa la firma del Repartidor")
+                if canvas1.image_data is None or canvas2.image_data is None:
+                    st.error("Por favor realice ambas firmas digitales")
                 else:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    
+                    # Guardar firmas
+                    img1 = Image.fromarray(canvas1.image_data.astype("uint8"))
+                    img2 = Image.fromarray(canvas2.image_data.astype("uint8"))
+                    firma1_path = f"completed/firma_repartidor_{timestamp}.png"
+                    firma2_path = f"completed/firma_controlador_{timestamp}.png"
+                    img1.save(firma1_path)
+                    img2.save(firma2_path)
+                    
                     data = {
                         "Fecha": datetime.today().strftime("%d-%m-%Y"),
                         "Hora": datetime.today().strftime("%H:%M"),
@@ -143,12 +173,14 @@ elif menu == "Completar Formulario":
                         "Prestamos": prestamos,
                         "Retiros": retiros,
                         "Observaciones": observaciones,
-                        "Firma_Repartidor": firma_repartidor,
-                        "Firma_Controlador": firma_controlador
+                        "Firma_Repartidor": firma1_path,
+                        "Firma_Controlador": firma2_path
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
 
                     st.success("✅ ¡Control guardado correctamente!")
+                    st.image(firma1_path, caption="Firma Repartidor")
+                    st.image(firma2_path, caption="Firma Controlador")
                     st.balloons()
 
 else:
@@ -160,6 +192,12 @@ else:
             st.subheader(f"📅 {df['Fecha'].iloc[0]} {df['Hora'].iloc[0]} - {df['Archivo'].iloc[0]}")
             st.caption(f"Camión: {df['Camion'].iloc[0]} | Total Despachado: {df['Total_Despachado'].iloc[0]}")
             st.dataframe(df, use_container_width=True)
+            
+            if "Firma_Repartidor" in df.columns and os.path.exists(df["Firma_Repartidor"].iloc[0]):
+                st.image(df["Firma_Repartidor"].iloc[0], caption="Firma Repartidor")
+            if "Firma_Controlador" in df.columns and os.path.exists(df["Firma_Controlador"].iloc[0]):
+                st.image(df["Firma_Controlador"].iloc[0], caption="Firma Controlador")
+            
             st.divider()
     else:
         st.info("Aún no hay controles guardados.")
