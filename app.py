@@ -39,7 +39,6 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
-            # Lectura del Excel
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
             total_desp = 0.0
@@ -56,8 +55,8 @@ elif menu == "Completar Formulario":
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # ==================== DATOS SOLO LECTURA ====================
-            st.subheader("Datos Generales (no modificables)")
+            # Datos Solo Lectura
+            st.subheader("1. Datos Generales (no modificables)")
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Localidad", localidad)
@@ -65,10 +64,10 @@ elif menu == "Completar Formulario":
                 st.metric("Camión", "AD")
             with col2:
                 st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
-                st.metric("Cantidad de Clientes", 17)
-                st.metric("**TOTAL DESPACHADO**", total_desp)
+                st.metric("Clientes", 17)
+                st.metric("Total Despachado", total_desp)
 
-            # ==================== FORMULARIO EDITABLE ====================
+            # Formulario Editable
             st.subheader("2. Retornos y Cambios")
             c1, c2 = st.columns(2)
             with c1:
@@ -80,10 +79,10 @@ elif menu == "Completar Formulario":
             st.subheader("Retornos Llenos")
             rl1, rl2 = st.columns(2)
             with rl1:
-                lleno_2500 = st.number_input("Retorno Lleno 2500", value=0.0, step=0.01, format="%.2f")
-                lleno_2000 = st.number_input("Retorno Lleno 2000", value=0.0, step=0.01, format="%.2f")
+                lleno_2500 = st.number_input("Lleno 2500", value=0.0, step=0.01, format="%.2f")
+                lleno_2000 = st.number_input("Lleno 2000", value=0.0, step=0.01, format="%.2f")
             with rl2:
-                lleno_1250 = st.number_input("Retorno Lleno 1250", value=0.0, step=0.01, format="%.2f")
+                lleno_1250 = st.number_input("Lleno 1250", value=0.0, step=0.01, format="%.2f")
 
             st.subheader("Cambios")
             c1, c2, c3 = st.columns(3)
@@ -108,18 +107,26 @@ elif menu == "Completar Formulario":
 
             observaciones = st.text_area("Observaciones", height=80)
 
-            st.subheader("✍️ Firma Digital")
-            firma_nombre = st.text_input("Nombre y Apellido", "")
+            st.subheader("✍️ Firmas")
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                firma_repartidor = st.text_input("Firma del Repartidor", "")
+            with col_f2:
+                firma_controlador = st.text_input("Firma del Controlador", "")
 
             if st.button("💾 Guardar Control Completo", type="primary"):
-                if not firma_nombre.strip():
-                    st.error("Por favor escribe tu nombre")
+                if not firma_repartidor.strip():
+                    st.error("Por favor completa la firma del Repartidor")
                 else:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
                     data = {
                         "Fecha": datetime.today().strftime("%d-%m-%Y"),
                         "Hora": datetime.today().strftime("%H:%M"),
+                        "Localidad": localidad,
+                        "Equipo": equipo,
+                        "Camion": "AD",
                         "Archivo": st.session_state.selected_file,
+                        "Total_Despachado": total_desp,
                         "Retorno_2500": ret_2500,
                         "Retorno_2000": ret_2000,
                         "Retorno_1250": ret_1250,
@@ -136,19 +143,22 @@ elif menu == "Completar Formulario":
                         "Prestamos": prestamos,
                         "Retiros": retiros,
                         "Observaciones": observaciones,
-                        "Firma": firma_nombre
+                        "Firma_Repartidor": firma_repartidor,
+                        "Firma_Controlador": firma_controlador
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
-                    st.success("✅ ¡Guardado correctamente!")
+
+                    st.success("✅ ¡Control guardado correctamente!")
                     st.balloons()
 
 else:
-    st.header("📋 Historial")
+    st.header("📋 Historial de Controles")
     data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
     if data_files:
         for f in sorted(data_files, reverse=True):
             df = pd.read_csv(f"data/{f}")
-            st.subheader(f"📅 {df['Fecha'].iloc[0]} {df.get('Hora', [''])[0]}")
+            st.subheader(f"📅 {df['Fecha'].iloc[0]} {df['Hora'].iloc[0]} - {df['Archivo'].iloc[0]}")
+            st.caption(f"Camión: {df['Camion'].iloc[0]} | Total Despachado: {df['Total_Despachado'].iloc[0]}")
             st.dataframe(df, use_container_width=True)
             st.divider()
     else:
