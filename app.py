@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 from streamlit_drawable_canvas import st_canvas   # ← Esta línea faltaba
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
-st.title("🧾 Control de Retornos - Rio Segundo")
+st.title("🧾 Controles de Retornos")
 
 os.makedirs("templates", exist_ok=True)
 os.makedirs("completed", exist_ok=True)
