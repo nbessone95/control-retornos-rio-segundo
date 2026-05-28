@@ -2,29 +2,28 @@ import streamlit as st
 from datetime import datetime
 import os
 import pandas as pd
+from PIL import Image
 from openpyxl import load_workbook
+from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
-st.title("🧾 Control de Retornos - Rio Segundo")
+st.title("🧾 Controles de Retornos ")
 
 os.makedirs("templates", exist_ok=True)
+os.makedirs("completed", exist_ok=True)
 os.makedirs("data", exist_ok=True)
 
 menu = st.sidebar.selectbox("Menú", ["Completar Formulario", "Subir Plantillas", "Historial"])
 
 if menu == "Subir Plantillas":
-    st.header("📤 Subir Plantillas del Día")
-    uploaded = st.file_uploader("Subir uno o varios Excels", 
-                               type="xlsx", 
-                               accept_multiple_files=True)
-    
+    st.header("📤 Subir Plantillas")
+    uploaded = st.file_uploader("Subir Excel", type="xlsx", accept_multiple_files=True)
     if uploaded:
-        with st.spinner("Guardando archivos..."):
+        with st.spinner("Guardando..."):
             for file in uploaded:
                 with open(f"templates/{file.name}", "wb") as f:
                     f.write(file.getbuffer())
                 st.success(f"✅ {file.name} guardado")
-        st.success(f"✅ Se guardaron {len(uploaded)} archivos correctamente")
         st.rerun()
 
 elif menu == "Completar Formulario":
@@ -44,7 +43,6 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
-            # Lectura básica
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
             total_desp = 0.0
@@ -61,8 +59,8 @@ elif menu == "Completar Formulario":
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # Formulario (mantengo lo esencial)
-            st.subheader("Datos Generales")
+            # Datos fijos
+            st.subheader("1. Datos Generales")
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Localidad", localidad)
@@ -73,48 +71,77 @@ elif menu == "Completar Formulario":
                 st.metric("Clientes", 17)
                 st.metric("Total Despachado", total_desp)
 
-            # ... (puedes agregar más campos aquí si querés)
+            # Formulario
+            st.subheader("2. Retornos y Operaciones")
+            # ... (mantengo los campos principales para no hacer el formulario demasiado largo)
+            c1, c2 = st.columns(2)
+            with c1:
+                ret_2500 = st.number_input("Retorno 2500", value=0.0, step=0.01, format="%.2f")
+                ret_2000 = st.number_input("Retorno 2000", value=0.0, step=0.01, format="%.2f")
+            with c2:
+                ret_1250 = st.number_input("Retorno 1250", value=0.0, step=0.01, format="%.2f")
+
+            st.subheader("Otras Operaciones")
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                venta_envases = st.number_input("Venta de Envases", value=0.0, step=0.01, format="%.2f")
+            with col_b:
+                prestamos = st.number_input("Préstamos", value=0.0, step=0.01, format="%.2f")
+            with col_c:
+                retiros = st.number_input("Retiros", value=0.0, step=0.01, format="%.2f")
 
             observaciones = st.text_area("Observaciones", height=80)
-            firma = st.text_input("Firma Chofer (Nombre y Apellido)", "")
 
-            if st.button("💾 Guardar Control", type="primary"):
-                if not firma.strip():
-                    st.error("Por favor ingrese la firma")
+            # ==================== FIRMA DIGITAL DEL CHOFER ====================
+            st.subheader("✍️ Firma Digital del Chofer")
+            canvas_chofer = st_canvas(
+                height=220,
+                width=700,
+                stroke_width=4,
+                stroke_color="#000000",
+                background_color="#ffffff",
+                key="canvas_chofer"
+            )
+
+            if st.button("💾 Guardar Control Completo", type="primary"):
+                if canvas_chofer.image_data is None:
+                    st.error("Por favor realice la firma digital del chofer")
                 else:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    img = Image.fromarray(canvas_chofer.image_data.astype("uint8"))
+                    firma_path = f"completed/firma_chofer_{timestamp}.png"
+                    img.save(firma_path)
+                    
                     data = {
                         "Fecha": datetime.today().strftime("%d-%m-%Y"),
                         "Hora": datetime.today().strftime("%H:%M"),
+                        "Localidad": localidad,
+                        "Equipo": equipo,
                         "Archivo": st.session_state.selected_file,
+                        "Total_Despachado": total_desp,
+                        "Retorno_2500": ret_2500,
+                        "Retorno_2000": ret_2000,
+                        "Retorno_1250": ret_1250,
+                        "Venta_Envases": venta_envases,
+                        "Prestamos": prestamos,
+                        "Retiros": retiros,
                         "Observaciones": observaciones,
-                        "Firma": firma
+                        "Firma_Chofer": firma_path
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
-                    st.success("✅ Guardado!")
+
+                    st.success("✅ ¡Control guardado correctamente!")
+                    st.image(firma_path, caption="Firma del Chofer")
                     st.balloons()
 
-else:  # Historial con descarga
-    st.header("📋 Historial de Controles")
+else:
+    st.header("📋 Historial")
     data_files = [f for f in os.listdir("data") if f.endswith(".csv")]
-    
     if data_files:
-        all_data = []
         for f in sorted(data_files, reverse=True):
             df = pd.read_csv(f"data/{f}")
-            all_data.append(df)
-        
-        if all_data:
-            full_df = pd.concat(all_data, ignore_index=True)
-            st.dataframe(full_df, use_container_width=True)
-            
-            # Botón para descargar todo
-            csv = full_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Descargar Historial Completo (CSV)",
-                data=csv,
-                file_name=f"Historial_Retornos_{datetime.today().strftime('%d-%m-%Y')}.csv",
-                mime="text/csv"
-            )
+            st.subheader(f"📅 {df['Fecha'].iloc[0]} {df.get('Hora', [''])[0]}")
+            st.dataframe(df, use_container_width=True)
+            st.divider()
     else:
         st.info("Aún no hay controles guardados.")
