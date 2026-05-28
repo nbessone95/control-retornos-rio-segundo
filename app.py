@@ -5,7 +5,7 @@ import pandas as pd
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
-st.title("🧾 Controles de Retornos ")
+st.title("🧾 Control de Retornos - Rio Segundo")
 
 os.makedirs("templates", exist_ok=True)
 os.makedirs("data", exist_ok=True)
