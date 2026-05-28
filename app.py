@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from PIL import Image
 from openpyxl import load_workbook
+from streamlit_drawable_canvas import st_canvas   # ← Esta línea faltaba
 
 st.set_page_config(page_title="Control Retornos", layout="wide")
 st.title("🧾 Control de Retornos - Rio Segundo")
@@ -116,7 +117,7 @@ elif menu == "Completar Formulario":
             with col_f1:
                 st.write("**Firma del Repartidor**")
                 canvas1 = st_canvas(
-                    height=200,
+                    height=180,
                     width=350,
                     stroke_width=3,
                     stroke_color="#000000",
@@ -127,7 +128,7 @@ elif menu == "Completar Formulario":
             with col_f2:
                 st.write("**Firma del Controlador**")
                 canvas2 = st_canvas(
-                    height=200,
+                    height=180,
                     width=350,
                     stroke_width=3,
                     stroke_color="#000000",
@@ -141,7 +142,6 @@ elif menu == "Completar Formulario":
                 else:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
                     
-                    # Guardar firmas
                     img1 = Image.fromarray(canvas1.image_data.astype("uint8"))
                     img2 = Image.fromarray(canvas2.image_data.astype("uint8"))
                     firma1_path = f"completed/firma_repartidor_{timestamp}.png"
