@@ -39,9 +39,10 @@ elif menu == "Completar Formulario":
             filepath = f"templates/{st.session_state.selected_file}"
             st.title(f"🧾 {st.session_state.selected_file.replace('.xlsx', '')}")
             
-            # Lectura básica
+            # Lectura del Excel
             localidad = "Rio Segundo"
             equipo = "Alessandrini / Rosso / Baldoncini"
+            total_desp = 0.0
             try:
                 wb = load_workbook(filepath, data_only=True)
                 ws3 = wb["Hoja3"] if "Hoja3" in wb.sheetnames else wb.active
@@ -49,27 +50,40 @@ elif menu == "Completar Formulario":
                 if "Hoja2" in wb.sheetnames:
                     ws2 = wb["Hoja2"]
                     equipo = str(ws2.cell(row=2, column=2).value or equipo)
+                total_desp = float(ws3.cell(row=24, column=5).value or 0)
             except:
                 pass
 
             st.success(f"Trabajando con: **{st.session_state.selected_file}**")
 
-            # ==================== CAMPOS ====================
-            st.subheader("Retornos")
+            # ==================== DATOS SOLO LECTURA ====================
+            st.subheader("Datos Generales (no modificables)")
             col1, col2 = st.columns(2)
             with col1:
+                st.metric("Localidad", localidad)
+                st.metric("Equipo", equipo)
+                st.metric("Camión", "AD")
+            with col2:
+                st.metric("Fecha", datetime.today().strftime("%d-%m-%Y"))
+                st.metric("Cantidad de Clientes", 17)
+                st.metric("**TOTAL DESPACHADO**", total_desp)
+
+            # ==================== FORMULARIO EDITABLE ====================
+            st.subheader("2. Retornos y Cambios")
+            c1, c2 = st.columns(2)
+            with c1:
                 ret_2500 = st.number_input("Retorno 2500", value=0.0, step=0.01, format="%.2f")
                 ret_2000 = st.number_input("Retorno 2000", value=0.0, step=0.01, format="%.2f")
-            with col2:
+            with c2:
                 ret_1250 = st.number_input("Retorno 1250", value=0.0, step=0.01, format="%.2f")
 
             st.subheader("Retornos Llenos")
             rl1, rl2 = st.columns(2)
             with rl1:
-                lleno_2500 = st.number_input("Lleno 2500", value=0.0, step=0.01, format="%.2f")
-                lleno_2000 = st.number_input("Lleno 2000", value=0.0, step=0.01, format="%.2f")
+                lleno_2500 = st.number_input("Retorno Lleno 2500", value=0.0, step=0.01, format="%.2f")
+                lleno_2000 = st.number_input("Retorno Lleno 2000", value=0.0, step=0.01, format="%.2f")
             with rl2:
-                lleno_1250 = st.number_input("Lleno 1250", value=0.0, step=0.01, format="%.2f")
+                lleno_1250 = st.number_input("Retorno Lleno 1250", value=0.0, step=0.01, format="%.2f")
 
             st.subheader("Cambios")
             c1, c2, c3 = st.columns(3)
@@ -83,7 +97,6 @@ elif menu == "Completar Formulario":
                 cam_220 = st.number_input("Cambio 220", value=0.0, step=0.01, format="%.2f")
                 cam_473 = st.number_input("Cambio 473", value=0.0, step=0.01, format="%.2f")
 
-            # ==================== COLUMNAS NUEVAS ====================
             st.subheader("Otras Operaciones")
             col_a, col_b, col_c = st.columns(3)
             with col_a:
@@ -95,7 +108,7 @@ elif menu == "Completar Formulario":
 
             observaciones = st.text_area("Observaciones", height=80)
 
-            st.subheader("Firma Digital")
+            st.subheader("✍️ Firma Digital")
             firma_nombre = st.text_input("Nombre y Apellido", "")
 
             if st.button("💾 Guardar Control Completo", type="primary"):
@@ -126,7 +139,7 @@ elif menu == "Completar Formulario":
                         "Firma": firma_nombre
                     }
                     pd.DataFrame([data]).to_csv(f"data/control_{timestamp}.csv", index=False)
-                    st.success("✅ Guardado correctamente!")
+                    st.success("✅ ¡Guardado correctamente!")
                     st.balloons()
 
 else:
